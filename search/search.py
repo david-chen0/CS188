@@ -72,6 +72,12 @@ def tinyMazeSearch(problem):
     w = Directions.WEST
     return  [s, s, w, s, w, w, s, w]
 
+class Node:
+    def __init__(self, state, path = []):
+        self.state = state
+        self.path = path
+
+
 def depthFirstSearch(problem):
     """
     Search the deepest nodes in the search tree first.
@@ -87,12 +93,46 @@ def depthFirstSearch(problem):
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    visitedNodes = set()
+    currentNode = Node(problem.getStartState())
+    stack = util.Stack()
+    stack.push(currentNode)
+
+    while not stack.isEmpty():
+        currentNode = stack.pop()
+
+        if problem.isGoalState(currentNode.state):
+            return currentNode.path
+
+        if currentNode.state in visitedNodes:
+            continue
+        
+        visitedNodes.add(currentNode.state)
+        for child in problem.getSuccessors(currentNode.state):
+            node = Node(child[0], currentNode.path + [child[1]])
+            stack.push(node)
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    visitedNodes = set()
+    currentNode = Node(problem.getStartState())
+    queue = util.Queue()
+    queue.push(currentNode)
+
+    while not queue.isEmpty():
+        currentNode = queue.pop()
+
+        if problem.isGoalState(currentNode.state):
+            return currentNode.path
+
+        if currentNode.state in visitedNodes:
+            continue
+        
+        visitedNodes.add(currentNode.state)
+        for child in problem.getSuccessors(currentNode.state):
+            node = Node(child[0], currentNode.path + [child[1]])
+            queue.push(node)
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
