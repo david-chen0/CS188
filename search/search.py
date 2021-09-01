@@ -73,9 +73,10 @@ def tinyMazeSearch(problem):
     return  [s, s, w, s, w, w, s, w]
 
 class Node:
-    def __init__(self, state, path = []):
+    def __init__(self, state, path = [], cost = 0):
         self.state = state
         self.path = path
+        self.cost = cost
 
 
 def depthFirstSearch(problem):
@@ -111,6 +112,7 @@ def depthFirstSearch(problem):
         for child in problem.getSuccessors(currentNode.state):
             node = Node(child[0], currentNode.path + [child[1]])
             stack.push(node)
+    return []
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
@@ -133,11 +135,30 @@ def breadthFirstSearch(problem):
         for child in problem.getSuccessors(currentNode.state):
             node = Node(child[0], currentNode.path + [child[1]])
             queue.push(node)
+    return []
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    visitedNodes = set()
+    currentNode = Node(problem.getStartState())
+    pQueue = util.PriorityQueue()
+    pQueue.push(currentNode, 0)
+
+    while not pQueue.isEmpty():
+        currentNode = pQueue.pop()
+
+        if problem.isGoalState(currentNode.state):
+            return currentNode.path
+
+        if currentNode.state in visitedNodes:
+            continue
+        
+        visitedNodes.add(currentNode.state)
+        for child in problem.getSuccessors(currentNode.state):
+            node = Node(child[0], currentNode.path + [child[1]], currentNode.cost + child[2])
+            pQueue.update(node, node.cost)
+    return []
 
 def nullHeuristic(state, problem=None):
     """
@@ -149,7 +170,25 @@ def nullHeuristic(state, problem=None):
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    visitedNodes = set()
+    currentNode = Node(problem.getStartState())
+    pQueue = util.PriorityQueue()
+    pQueue.push(currentNode, 0)
+
+    while not pQueue.isEmpty():
+        currentNode = pQueue.pop()
+
+        if problem.isGoalState(currentNode.state):
+            return currentNode.path
+
+        if currentNode.state in visitedNodes:
+            continue
+        
+        visitedNodes.add(currentNode.state)
+        for child in problem.getSuccessors(currentNode.state):
+            node = Node(child[0], currentNode.path + [child[1]], currentNode.cost + child[2])
+            pQueue.update(node, node.cost + heuristic(child[0], problem))
+    return []
 
 
 # Abbreviations
