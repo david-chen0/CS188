@@ -71,10 +71,12 @@ class RegressionModel(object):
         self.batchSize = 5 # Total size of dataset must be divisible by batch size, 5 seems to work well
         self.learningRate = 0.002 # Learning rate should be between 0.001 and 1.0, <=0.005 seems to work well
 
-        size = 64 # Size must be between 10 and 400, >64 takes too long to converge and <64 is inaccurate
+        size = 64 # Size should be between 10 and 400, >64 takes too long to converge and <64 is inaccurate
+
+        # Use 1-3 hidden layers
         self.w1 = nn.Parameter(1, size)
         self.b1 = nn.Parameter(1, size)
-        self.w2 = nn.Parameter(size, 1) # 1-3 hidden layers
+        self.w2 = nn.Parameter(size, 1)
         self.b2 = nn.Parameter(1, 1)
 
     def run(self, x):
@@ -109,17 +111,22 @@ class RegressionModel(object):
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
-        curLoss = 1
-        while curLoss >= self.targetLoss:
+        while True:
+            totalLoss = 0
+            totalCount = 0
             for x, y in dataset.iterate_once(self.batchSize):
                 loss = self.get_loss(x, y)
-                curLoss = nn.as_scalar(loss)
+                totalLoss += nn.as_scalar(loss)
+                totalCount += 1
                 gradient = nn.gradients(loss, [self.w1, self.b1, self.w2, self.b2])
 
                 self.w1.update(gradient[0], -1 * self.learningRate)
                 self.b1.update(gradient[1], -1 * self.learningRate)
                 self.w2.update(gradient[2], -1 * self.learningRate)
                 self.b2.update(gradient[3], -1 * self.learningRate)
+
+            if totalLoss / totalCount < self.targetLoss:
+                break
                 
 
                 
@@ -142,6 +149,22 @@ class DigitClassificationModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
+        self.targetThreshold = 0.98 # Spec requires 0.97 but better to be safe
+        self.batchSize = 1
+        self.learningRate = 0.005 # Learning rate should be between 0.001 and 1.0, need a higher learning rate here
+
+        # Bad size combos: (128, 64), (100, 50), 
+        size1 = 256
+        size2 = 128
+
+        # One hidden layer gets stuck at 95% accuracy, so use 2-3
+        self.w1 = nn.Parameter(784, size1)
+        self.b1 = nn.Parameter(1, size1)
+        self.w2 = nn.Parameter(size1, size2)
+        self.b2 = nn.Parameter(1, size2)
+        self.w3 = nn.Parameter(size2, 10)
+        self.b3 = nn.Parameter(1, 10)
+
 
     def run(self, x):
         """
@@ -158,6 +181,10 @@ class DigitClassificationModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        firstLayer = nn.ReLU(nn.AddBias(nn.Linear(x, self.w1), self.b1))
+        secondLayer = nn.ReLU(nn.AddBias(nn.Linear(firstLayer, self.w2), self.b2))
+        thirdLayer = nn.AddBias(nn.Linear(secondLayer, self.w3), self.b3)
+        return thirdLayer
 
     def get_loss(self, x, y):
         """
@@ -173,12 +200,28 @@ class DigitClassificationModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(x), y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        while True:
+            for x, y in dataset.iterate_once(self.batchSize):
+                loss = self.get_loss(x, y)
+                gradient = nn.gradients(loss, [self.w1, self.b1, self.w2, self.b2, self.w3, self.b3])
+
+                self.w1.update(gradient[0], -1 * self.learningRate)
+                self.b1.update(gradient[1], -1 * self.learningRate)
+                self.w2.update(gradient[2], -1 * self.learningRate)
+                self.b2.update(gradient[3], -1 * self.learningRate)
+                self.w3.update(gradient[4], -1 * self.learningRate)
+                self.b3.update(gradient[5], -1 * self.learningRate)
+            
+            if dataset.get_validation_accuracy() > self.targetThreshold:
+                break
+
 
 class LanguageIDModel(object):
     """
@@ -198,6 +241,8 @@ class LanguageIDModel(object):
 
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
+        self.batchSize = 1
+        self.learningRate = 0.005 # Learning rate should be between 0.001 and 1.0
 
     def run(self, xs):
         """
