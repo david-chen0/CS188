@@ -241,8 +241,19 @@ class LanguageIDModel(object):
 
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
-        self.batchSize = 1
-        self.learningRate = 0.005 # Learning rate should be between 0.001 and 1.0
+        self.targetThreshold = 0.85
+        self.batchSize = 32
+        self.learningRate = 0.025 # Learning rate should be between 0.001 and 1.0
+
+        # Bad sizes: 
+        size = 512
+
+        self.w1 = nn.Parameter(self.num_chars, size)
+        self.b1 = nn.Parameter(1, size)
+        self.w2 = nn.Parameter(size, size)
+        self.b2 = nn.Parameter(1, size)
+        self.w3 = nn.Parameter(size, 5)
+        self.b3 = nn.Parameter(1, 5)
 
     def run(self, xs):
         """
@@ -274,6 +285,22 @@ class LanguageIDModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        result = nn.ReLU(nn.AddBias(nn.Linear(xs[0], self.w1), self.b1))
+        for char in xs[1:]:
+            # All methods are pretty slow to converge, might be able to improve with another layer?
+
+            # 85%
+            result = nn.ReLU(nn.AddBias(nn.Add(nn.AddBias(nn.Linear(char, self.w1), self.b1), nn.Linear(result, self.w2)), self.b2))
+
+            # 80%
+            #result = nn.AddBias(nn.Add(nn.AddBias(nn.Linear(char, self.w1), self.b1), nn.Linear(result, self.w2)), self.b2)
+
+            # 80%
+            #result = nn.AddBias(nn.Linear((nn.Add(nn.AddBias(nn.Linear(char, self.w1), self.b1), result)), self.w2), self.b2)
+
+            # 79%
+            #result = nn.Add(nn.AddBias(nn.Linear(char, self.w1), self.b1), nn.AddBias(nn.Linear(result, self.w2), self.b2))
+        return nn.AddBias(nn.Linear(result, self.w3), self.b3)
 
     def get_loss(self, xs, y):
         """
@@ -290,9 +317,24 @@ class LanguageIDModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(xs), y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        while True:
+            for x, y in dataset.iterate_once(self.batchSize):
+                loss = self.get_loss(x, y)
+                gradient = nn.gradients(loss, [self.w1, self.b1, self.w2, self.b2, self.w3, self.b3])
+
+                self.w1.update(gradient[0], -1 * self.learningRate)
+                self.b1.update(gradient[1], -1 * self.learningRate)
+                self.w2.update(gradient[2], -1 * self.learningRate)
+                self.b2.update(gradient[3], -1 * self.learningRate)
+                self.w3.update(gradient[4], -1 * self.learningRate)
+                self.b3.update(gradient[5], -1 * self.learningRate)
+            
+            if dataset.get_validation_accuracy() > self.targetThreshold:
+                break
